@@ -4,8 +4,27 @@ A browser-based customer support chatbot that helps users track shipments, under
 
 ---
 
-## Screenshots
+## Screenshots for Cases
 
+### 1. Starting the conversation
+<img width="406" height="518" alt="Start" src="https://github.com/user-attachments/assets/6dcf8908-ad2d-4338-a745-7530c71fca9b" />
+
+### 2. Tracking an in-transit package
+<img width="839" height="1070" alt="Tracking" src="https://github.com/user-attachments/assets/49efbf82-c4f0-4d99-a626-be3ead43cc47" />
+
+### 3. Delivered but not received flow
+Image 1:
+<img width="869" height="1093" alt="Missing Flow pt.1" src="https://github.com/user-attachments/assets/4332ce02-834f-4185-b98f-5ddfb06293b5" />
+
+Image 2:
+<img width="902" height="1086" alt="Missing Flow pt.2" src="https://github.com/user-attachments/assets/ebd410d5-75df-4d3b-8813-8157b8f8a67c" />
+
+
+### 4. Claim filed confirmation
+<img width="833" height="1084" alt="Claim File" src="https://github.com/user-attachments/assets/f8cd44ed-dc9f-4241-8c9b-8e979740526d" />
+
+### 5. Error handling (invalid order)
+<img width="422" height="544" alt="Error" src="https://github.com/user-attachments/assets/7003d9b9-70e4-49ce-afae-a298b67c0492" />
 
 
 ## Flowchart
