@@ -6,52 +6,47 @@ A browser-based customer support chatbot that helps users track shipments, under
 
 ## Screenshots
 
+
+
+## Flowchart
 ```mermaid
 flowchart TD
-    %% Styling
-    classDef startEnd fill:#1a56db,stroke:#fff,stroke-width:2px,color:#fff;
-    classDef state fill:#e8f0fd,stroke:#1a56db,stroke-width:1px;
-    classDef action fill:#f7f8fc,stroke:#e2e5f0,stroke-width:1px;
+    %% Theme
+    classDef startEnd fill:#2563eb,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef state fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#111827;
+    classDef action fill:#f9fafb,stroke:#9ca3af,stroke-width:1.2px,color:#111827;
+    classDef tool fill:#ecfdf5,stroke:#10b981,stroke-width:1.5px,color:#064e3b;
+    classDef error fill:#fef2f2,stroke:#ef4444,stroke-width:1.5px,color:#7f1d1d;
 
-    Start((Start)):::startEnd --> Boot[Greet User]:::action
-    Boot --> AskOrderID{ask_order_id}:::state
+    Start((Start)):::startEnd --> Greet[Greet user]:::action
+    Greet --> AskOrder{Ask for order ID}:::state
 
-    %% Global Overrides
-    Global[Any Point in Chat] -.->|Type 'agent'| Agent[Escalate to Human Agent]:::action
-    Global -.->|Type 'start over'| AskOrderID
-    Agent --> Done(((Done))):::startEnd
+    AskOrder -->|Invalid or not found| Error[Show error message]:::error
+    Error --> AskOrder
 
-    %% Order ID Routing
-    AskOrderID -->|Invalid / Not Found| AskOrderID
-    AskOrderID -->|Status: In Transit / Out for Delivery| PostTransit{post_transit}:::state
-    AskOrderID -->|Status: Delivered| AskReceived{ask_received}:::state
-    AskOrderID -->|Status: Delayed| PostDelayed{post_delayed}:::state
+    AskOrder -->|In transit or out for delivery| Transit[Show tracking info]:::action
+    Transit --> MoreHelp{Need more help}:::state
+    MoreHelp -->|Track another| AskOrder
+    MoreHelp -->|No| Done((Done)):::startEnd
 
-    %% Transit Flow
-    PostTransit -->|Track another| AskOrderID
-    PostTransit -->|No, I'm good| Done
+    AskOrder -->|Delivered| Received{Package received}:::state
+    Received -->|Yes| Done
+    Received -->|No| Photo[Check delivery photo]:::action
+    Photo --> Neighbor[Check neighbor or desk]:::action
+    Neighbor --> FinalCheck{Still missing}:::state
+    FinalCheck -->|Found| Done
+    FinalCheck -->|Missing| ClaimOffer{Offer claim}:::state
 
-    %% Delivered / Missing Package Flow
-    AskReceived -->|Yes, got it| Done
-    AskReceived -->|No, didn't get it| CheckPhoto[check_photo: Ask to check photo]:::state
-    CheckPhoto --> CheckNeighbor[check_neighbor: Ask to check neighbor/desk]:::state
+    AskOrder -->|Delayed| Delay[Explain delay]:::action
+    Delay --> ClaimOffer
 
-    CheckNeighbor -->|"I'll check"| AskReceivedFinal{ask_received_final}:::state
-    CheckNeighbor -->|"Checked, no one has it"| OfferClaim{offer_claim}:::state
+    ClaimOffer -->|No| Done
+    ClaimOffer -->|Yes| FileClaim[Create claim ID]:::tool
+    FileClaim --> Done
 
-    AskReceivedFinal -->|Found it| Done
-    AskReceivedFinal -->|Still missing| OfferClaim
-
-    %% Delayed / Claim Flow
-    PostDelayed --> OfferClaim
-
-    OfferClaim -->|No thanks| Done
-    OfferClaim -->|Yes, file a claim| ClaimFiled[claim_filed: Generate Claim ID]:::state
-
-    ClaimFiled --> Done
-
-    %% Loop back
-    Done -->|Track another order| AskOrderID
+    AnyPoint[Any point in chat]:::action -.->|Type agent| Agent[Escalate to human]:::action
+    AnyPoint -.->|Type start over| AskOrder
+    Agent --> Done
 ```
 
 ### Tracking an in-transit package
