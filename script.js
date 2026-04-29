@@ -84,7 +84,8 @@ function addMessage(text, sender, extraHTML) {
   const wrapper = document.createElement("div");
   wrapper.style.display = "flex";
   wrapper.style.flexDirection = "column";
-  wrapper.className = "message-wrapper";
+  wrapper.style.maxWidth = "80%";
+  if (sender === "user") wrapper.style.alignItems = "flex-end";
 
   const bubble = document.createElement("div");
   bubble.className = "bubble " + sender;
@@ -286,6 +287,18 @@ function buildClaimCard(claim) {
   </div>`;
 }
 
+// ─── Shared intent helpers ────────────────────────────────────────────────────
+
+// Returns true only for clearly affirmative input
+function isYes(lower) {
+  return /\b(yes|yeah|yep|yup|sure|ok|okay|got it|received|i got|i did|found it|correct|right|affirmative|please|go ahead|do it|file it|sounds good)\b/.test(lower);
+}
+
+// Returns true only for clearly negative input
+function isNo(lower) {
+  return /\b(no|nope|nah|not|never|didn't|did not|haven't|i haven't|no one|nobody|nothing|cancel|skip|nevermind|never mind|that's okay|thats okay|i'm good|im good|all good|that's all|thats all|thanks|thank you|no thanks|don't|dont)\b/.test(lower);
+}
+
 // ─── Conversation logic ───────────────────────────────────────────────────────
 
 async function processUserInput(userText) {
@@ -295,7 +308,7 @@ async function processUserInput(userText) {
   removeQuickReplies();
 
   // Global: escalate to human agent
-  if (["agent", "human", "representative", "speak to agent"].some((w) => lower.includes(w))) {
+  if (/\b(agent|human|representative|speak to agent|real person|live person)\b/.test(lower)) {
     conversationState.step = "done";
     await botReply("I'll connect you with a human agent right away. Your chat transcript will be shared with them so you don't have to repeat yourself.<br><br>Average wait time: <strong>2 minutes</strong>. Thank you for your patience! 🙏");
     showQuickReplies(["Track another order"]);
@@ -303,7 +316,7 @@ async function processUserInput(userText) {
   }
 
   // Global: restart
-  if (["start over", "restart", "new order", "track another order", "track another"].some((w) => lower.includes(w))) {
+  if (/\b(start over|restart|new order|track another order|track another)\b/.test(lower)) {
     conversationState.step = "ask_order_id";
     conversationState.currentOrder = null;
     conversationState.currentOrderId = null;
@@ -314,6 +327,7 @@ async function processUserInput(userText) {
   }
 
   switch (conversationState.step) {
+    // ── Ask for order ID ────────────────────────────────────────────────────
     case "ask_order_id": {
       const orderIdMatch = input.match(/[A-Za-z]{2}\d{5}/i);
       if (!orderIdMatch) {
@@ -339,7 +353,7 @@ async function processUserInput(userText) {
       } else if (order.status === "out_for_delivery") {
         conversationState.step = "post_transit";
         await botReply(`Great news! Your order is <strong>out for delivery today</strong>:`, buildOrderCard(order, orderId));
-        setTimeout(() => botReply(`Keep an eye out — delivery is expected <strong>${order.eta}</strong>. Anything else I can help with?`, null, 700, ["No, I'm good", "Track another order"]), 500);
+        setTimeout(() => botReply(`Keep an eye out — delivery is expected <strong>${order.eta}</strong>. Anything else I can help with?`, null, 700, ["Yes, more help", "No, I'm good", "Track another order"]), 500);
       } else if (order.status === "delivered") {
         conversationState.step = "ask_received";
         await botReply(`Here's your order info:`, buildOrderCard(order, orderId));
@@ -360,65 +374,75 @@ async function processUserInput(userText) {
       break;
     }
 
+    // ── Did you receive the package? ────────────────────────────────────────
     case "ask_received": {
-      const isYes = lower.match(/^(yes|yeah|yep|yup|got it|received|i got|i did)/);
-      const isNo = lower.match(/^(no|nope|nah|didn't|did not|haven't|i haven't)/);
-      if (isYes || (lower.includes("yes") && !lower.includes("no"))) {
+      if (isYes(lower)) {
         conversationState.step = "done";
         await botReply("That's great to hear! Enjoy your order. 😊 Is there anything else I can help you with?", null, 700, ["Track another order", "No, all good!"]);
-      } else if (isNo || lower.includes("no") || lower.includes("not")) {
+      } else if (isNo(lower)) {
         conversationState.step = "check_photo";
         await botReply("I'm sorry to hear that! Let's figure this out. First — did you check the delivery photo? Sometimes packages are left in a spot that's hard to spot at first glance.", null, 900, ["Yes, checked already", "Let me check now"]);
       } else {
-        await botReply("Could you let me know — did you receive the package?", null, 500, ["Yes, got it!", "No, I didn't receive it"]);
+        await botReply("Sorry, I didn't catch that. Could you let me know — did you receive the package?", null, 600, ["Yes, got it!", "No, I didn't receive it"]);
       }
       break;
     }
 
+    // ── Did you check the delivery photo? ───────────────────────────────────
     case "check_photo": {
-      conversationState.step = "check_neighbor";
-      await botReply("Got it. One more thing — could a neighbor, the building front desk, or a mail room have accepted the package on your behalf?", null, 900, ["Yes, I'll check", "I checked — no one has it"]);
+      if (isYes(lower) || isNo(lower)) {
+        // Either answer moves us forward — we just want to acknowledge before asking about neighbours
+        conversationState.step = "check_neighbor";
+        await botReply("Got it. One more thing — could a neighbor, the building front desk, or a mail room have accepted the package on your behalf?", null, 900, ["Yes, I'll check", "I checked — no one has it"]);
+      } else {
+        await botReply("Did you get a chance to check the delivery photo or look around the drop-off area?", null, 600, ["Yes, checked already", "Let me check now"]);
+      }
       break;
     }
 
+    // ── Could a neighbour have it? ──────────────────────────────────────────
     case "check_neighbor": {
-      const willCheck = lower.includes("yes") || lower.includes("i'll check") || lower.includes("will check");
-      if (willCheck) {
+      if (isYes(lower)) {
         conversationState.step = "ask_received_final";
         await botReply("No problem, take your time. Let me know what you find!", null, 700, ["Found it!", "Still can't find it"]);
-      } else {
+      } else if (isNo(lower)) {
         conversationState.step = "offer_claim";
         await botReply(`I understand — this sounds like a missing package situation. I'd recommend filing a claim so our team can investigate and arrange a replacement or refund. Would you like me to file a claim for order <strong>${conversationState.currentOrderId}</strong>?`, null, 1000, [
           "Yes, file a claim",
           "Not right now",
           "Contact agent",
         ]);
+      } else {
+        await botReply("Could a neighbor, the front desk, or a mail room have accepted the package on your behalf?", null, 600, ["Yes, I'll check", "I checked — no one has it"]);
       }
       break;
     }
 
+    // ── Final check after neighbour follow-up ───────────────────────────────
     case "ask_received_final": {
-      const found = lower.includes("found") || lower.includes("yes") || lower.includes("got it");
-      if (found) {
+      if (isYes(lower)) {
         conversationState.step = "done";
         await botReply("Wonderful! Glad we sorted that out. Enjoy your delivery! 🎉", null, 700, ["Track another order", "All done!"]);
-      } else {
+      } else if (isNo(lower)) {
         conversationState.step = "offer_claim";
         await botReply("Sorry to hear it's still missing. Let me file a claim for you — our team will investigate and get back to you within 24–48 hours. Shall I go ahead?", null, 1000, ["Yes, file a claim", "Contact agent"]);
+      } else {
+        await botReply("Were you able to track it down? Let me know if you found it or if it's still missing.", null, 600, ["Found it!", "Still can't find it"]);
       }
       break;
     }
 
+    // ── Offer / confirm claim (also handles delayed flow) ───────────────────
     case "offer_claim":
     case "post_delayed": {
-      const wantsClaim = lower.includes("claim") || lower.includes("file") || lower.includes("yes") || lower.includes("please");
-      const contactAgent = lower.includes("agent") || lower.includes("contact") || lower.includes("human");
-      const noClaim = lower.includes("no") || lower.includes("okay") || lower.includes("that's okay");
+      const wantsClaim = isYes(lower) || /\b(claim|file)\b/.test(lower);
+      const contactAgent = /\b(agent|contact|human|representative)\b/.test(lower);
+      const declines = isNo(lower) && !wantsClaim;
 
       if (contactAgent) {
         conversationState.step = "done";
         await botReply("Connecting you now to a live agent. They'll have full access to your order details. Hang tight!", null, 700, ["Track another order"]);
-      } else if (noClaim) {
+      } else if (declines) {
         conversationState.step = "done";
         await botReply("Understood. If you change your mind, just come back and I'll be here. Is there anything else I can help with?", null, 700, ["Track another order", "All done"]);
       } else if (wantsClaim) {
@@ -435,32 +459,43 @@ async function processUserInput(userText) {
           400,
         );
       } else {
-        await botReply("Just to confirm — would you like me to file a claim?", null, 500, ["Yes, file a claim", "No thanks", "Contact agent"]);
+        await botReply("Sorry, I didn't catch that. Would you like me to file a claim, or would you prefer to speak to an agent?", null, 600, ["Yes, file a claim", "No thanks", "Contact agent"]);
       }
       break;
     }
 
+    // ── Post transit / out-for-delivery wrap-up ─────────────────────────────
     case "post_transit": {
-      const moreHelp = lower.includes("yes") || lower.includes("more") || lower.includes("help");
+      const moreHelp = isYes(lower) || /\b(more|help|another|track)\b/.test(lower);
+      const noMoreHelp = isNo(lower) && !moreHelp;
+
       if (moreHelp) {
         conversationState.step = "ask_order_id";
         await botReply("Of course! Do you have another order ID you'd like to look up, or is there something specific about this shipment I can help with?");
-      } else {
+      } else if (noMoreHelp) {
         conversationState.step = "done";
         await botReply("Perfect! Hope your delivery arrives on time. Come back anytime if you need help. 👋", null, 700, ["Track another order"]);
+      } else {
+        await botReply("Sorry, I didn't quite catch that. Is there anything else I can help you with?", null, 600, ["Yes, more help", "No, I'm good", "Track another order"]);
       }
       break;
     }
 
+    // ── Conversation complete ───────────────────────────────────────────────
     case "claim_filed":
     case "done": {
-      if (lower.includes("track") || lower.includes("order") || isValidOrderFormat(input)) {
+      if (/\b(track|order)\b/.test(lower) || isValidOrderFormat(input)) {
         conversationState.step = "ask_order_id";
         if (isValidOrderFormat(input)) {
           handleUserInput(input);
           return;
         }
         await botReply("Sure! What order ID would you like to look up?");
+      } else if (isYes(lower)) {
+        conversationState.step = "ask_order_id";
+        await botReply("Great! What order ID would you like to look up?");
+      } else if (isNo(lower)) {
+        await botReply("No problem! Come back anytime. Have a great day! 👋", null, 600);
       } else {
         await botReply("I'm here if you need anything else! You can enter another order ID anytime to track a shipment.", null, 700, ["Track another order"]);
       }
