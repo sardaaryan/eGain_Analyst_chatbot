@@ -14,17 +14,19 @@ A browser-based customer support chatbot that helps users track shipments, under
 
 ### 3. Delivered but not received flow
 Image 1:
-<img width="869" height="1093" alt="Missing Flow pt.1" src="https://github.com/user-attachments/assets/4332ce02-834f-4185-b98f-5ddfb06293b5" />
+<img width="869" height="1093" alt="Missing Flow 1" src="https://github.com/user-attachments/assets/4332ce02-834f-4185-b98f-5ddfb06293b5" />
 
 Image 2:
-<img width="902" height="1086" alt="Missing Flow pt.2" src="https://github.com/user-attachments/assets/ebd410d5-75df-4d3b-8813-8157b8f8a67c" />
-
+<img width="902" height="1086" alt="Missing Flow 2" src="https://github.com/user-attachments/assets/ebd410d5-75df-4d3b-8813-8157b8f8a67c" />
 
 ### 4. Claim filed confirmation
 <img width="833" height="1084" alt="Claim File" src="https://github.com/user-attachments/assets/f8cd44ed-dc9f-4241-8c9b-8e979740526d" />
 
 ### 5. Error handling (invalid order)
-<img width="422" height="544" alt="Error" src="https://github.com/user-attachments/assets/7003d9b9-70e4-49ce-afae-a298b67c0492" />
+<img width="422" height="544" alt="Error 1" src="https://github.com/user-attachments/assets/7003d9b9-70e4-49ce-afae-a298b67c0492" />
+
+### 6. Error handling(unexpected user response)
+<img width="832" height="1065" alt="Error 2" src="https://github.com/user-attachments/assets/61ea347c-6b41-4e93-bda8-37554f27a775" />
 
 
 ## Flowchart
